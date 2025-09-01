@@ -1,0 +1,45 @@
+{
+    "menus": [{
+        "section": "Modules",
+        "_comment": "ระบบขึ้นทะเบียนตาม ม.5",
+        "icon": "mdi mdi-bookmark-plus",
+        "items": [            
+            {
+                "title": "section5_application_ins",
+                "display": "คำขอขึ้นทะเบียน ผู้ตรวจ และผู้ประเมิน",
+                "sub_menus":[
+                    {
+                        "title": "setion5-application-inspector",
+                        "display" : "ยื่นคำขอเป็นผู้ตรวจ/ผู้ประเมิน",
+                        "icon": "mdi mdi-human-handsup",
+                        "url": "\/request-section-5\/application_inspectors"
+                    }
+                ]
+            },
+            {
+                "title": "section5_application_ibcb",
+                "display": "คำขอขึ้นทะเบียน IB/CB",
+                "sub_menus":[
+                    {
+                        "title": "setion5-application-ibcb",
+                        "display" : "ยื่นคำขอเป็นหน่วยตรวจสอบ (IB)",
+                        "icon": "mdi mdi-human-handsup",
+                        "url": "\/request-section-5\/application-ibcb"
+                    }
+                ]
+            },
+            {
+                "title": "section5_application_lab",
+                "display": "คำขอขึ้นทะเบียน LAB",
+                "sub_menus":[
+                    {
+                        "title": "setion5-application-lab",
+                        "display" : "ยื่นคำขอเป็นผู้ตรวจสอบ (LAB)",
+                        "icon": "mdi mdi-human-handsup",
+                        "url": "\/request-section-5\/application-lab"
+                    }
+                ]
+            }
+        ]
+    }]
+}
