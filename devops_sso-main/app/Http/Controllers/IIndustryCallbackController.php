@@ -147,6 +147,7 @@ class IIndustryCallbackController extends Controller
             'token'  => $token,
             'source' => 'i-industry',
         ));
+        
     }
 
     private function routeByProgid($progid)

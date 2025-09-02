@@ -116,6 +116,7 @@ Route::get('test-prefix', function (){
 });
 
 //ลงทะเบียน
+
 Route::POST('auth/register/datatype','Auth\RegisterController@datatype');
 Route::POST('auth/register/check_tax_number','Auth\RegisterController@check_tax_number');
 Route::POST('auth/register/get_tax_number','Auth\RegisterController@get_tax_number');
@@ -123,6 +124,7 @@ Route::POST('auth/register/get_legal_entity','Auth\RegisterController@get_legal_
 Route::POST('auth/register/get_legal_faculty','Auth\RegisterController@get_legal_faculty');
 Route::POST('auth/register/get_taxid','Auth\RegisterController@get_taxid');
 Route::POST('auth/register/check_email','Auth\RegisterController@check_email');
+
 
 //ลงทะเบียนสาขา
 Route::get('register-branch', 'Auth\RegisterBranchController@index');

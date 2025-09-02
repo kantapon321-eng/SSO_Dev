@@ -14,6 +14,7 @@
 
 @php
     $config  = HP::getConfig();
+    $skip = session()->pull('reg_skip', false);
     $prefill = session('reg_prefill'); // <-- ข้อมูลที่ callback ใส่มาให้
     $redirect_uri = request()->get('redirect_uri');
 @endphp
@@ -818,6 +819,88 @@
 <!-- ====== Loading ====== -->
 <script src="{{ asset('plugins/components/loading-overlay/js/loadingoverlay.min.js') }}"></script>
 <script>
+
+(function () {
+      // ธงไว้ให้สคริปต์อื่นรู้ด้วย (ถ้าจะอ้างใช้ต่อ)
+      window.__SKIP_REGISTER_SUBPAGE__ = true;
+
+      // 1) ยิง CSS ปิดทุก element ที่มักใช้เป็นหน้า “คั่น”
+      //    (ใส่ selector กว้าง ๆ + !important กัน re-show)
+      var css = `
+        .intro-step, .register-intro, .wizard-intro,
+        [data-step="intro"], .step-intro, .subpage-intro,
+        .onboarding, .pre-register, .choose-type,
+        .modal-backdrop, .modal.in, .overlay, .page-mask {
+          display:none !important; visibility:hidden !important; opacity:0 !important;
+        }
+      `;
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      style.appendChild(document.createTextNode(css));
+      document.head.appendChild(style);
+
+      // 2) ฟังก์ชัน “เผยฟอร์มจริง” แบบบังคับ
+      function forceShowForm() {
+        var s = function(sel){ try{ return document.querySelector(sel); }catch(e){ return null; } };
+        var show = function(el){ if(!el) return; el.style.display = ''; el.hidden = false; el.classList.remove('hidden'); el.style.visibility = 'visible'; el.style.opacity = '1'; };
+
+        // id/class ที่เจอในโปรเจกต์นี้บ่อย (ใส่หลายตัวไว้ได้)
+        var targets = ['#div_profile', '#div_sign_up', '#div_register_form', '.register-form'];
+        targets.forEach(function(sel){ var el = s(sel); if(el){ show(el); } });
+
+        // บางที่ใช้ tab/wizard ซ่อนด้วย attr
+        document.querySelectorAll('[data-step], [data-tab], [hidden]').forEach(function(el){
+          el.hidden = false;
+        });
+
+        // ถ้ามีพวก fade/overlay ที่บังทั้งหน้า (fixed + z-index สูง) ให้ซ่อนทิ้ง
+        document.querySelectorAll('body *').forEach(function(el){
+          var cs = window.getComputedStyle(el);
+          if (cs.position === 'fixed' && parseInt(cs.zIndex || '0', 10) >= 1000) {
+            // ถ้าตัวนี้ไม่ใช่ toast/tooltip และใหญ่เกินครึ่งจอ ถือว่าเป็นตัวบัง
+            var rect = el.getBoundingClientRect();
+            var big = (rect.width * rect.height) > (window.innerWidth * window.innerHeight * 0.25);
+            var looksLikeMask = /backdrop|overlay|modal|mask|intro|wizard|step/i.test(el.className + ' ' + (el.id || ''));
+            if (big || looksLikeMask) {
+              el.style.display = 'none';
+              el.style.visibility = 'hidden';
+              el.style.opacity = '0';
+            }
+          }
+        });
+      }
+
+      // 3) กันกรณีสคริปต์อื่นทำงานทีหลังแล้วบังอีก: ใช้ MutationObserver
+      var mo = new MutationObserver(function(muts){
+        // ถ้ามี node ใหม่โผล่ ให้ forceShow ซ้ำ
+        forceShowForm();
+      });
+      mo.observe(document.documentElement, {childList:true, subtree:true});
+
+      // 4) ยิงหลายรอบ (สำหรับเคส lazy-loaded/wizard) แล้วค่อยหยุด
+      var kicks = [0, 50, 120, 250, 500, 1000];
+      kicks.forEach(function(t){ setTimeout(forceShowForm, t); });
+
+      // 5) บังคับเลือกประเภทตามที่ตัดสินใจมาแล้ว (จาก payload)
+      //    jt: '2' = นิติบุคคล -> applicanttype_id '1'
+      //    jt: '1' = บุคคลธรรมดา -> applicanttype_id '2'
+      try {
+        var pf = @json($prefill ?? []);
+        var applicant = (pf && pf.jt === '2') ? '1' : '2';
+        // เช็คทั้ง input radio แบบเดิม/ICheck
+        var el = document.querySelector('.applicanttype_id[value="'+ applicant +'"]');
+        if (el) {
+          el.checked = true;
+          // ถ้ามี iCheck
+          if (window.jQuery && jQuery.fn.iCheck) {
+            jQuery('.applicanttype_id[value="'+ applicant +'"]').iCheck('check');
+          }
+        }
+      } catch (e) {}
+
+      // 6) เผยฟอร์มครั้งแรกทันที
+      forceShowForm();
+    })();
 
     $(document).ready(function () {
 
@@ -2750,5 +2833,80 @@
                 });
 
             }
+            function skipIntroAndPrefill() {
+                var SKIP = {!! $skip ? 'true' : 'false' !!};
+                if(!SKIP) return;
+
+                // map JT -> applicanttype_id
+                var applicant = (prefill.jt === '2') ? '1' : '2';
+
+                // ตั้งค่าประเภทผู้สมัคร
+                $('.applicanttype_id[value="'+ applicant +'"]').prop('checked', true);
+                $('.applicanttype_id').iCheck('update');
+                applicanttype();
+
+                // กรอก tax_number และ username
+                if (prefill.tax_number) {
+                    if (!$('#tax_number').val()) { $('#tax_number').val(prefill.tax_number); }
+                    if (!$('#username').val())   { $('#username').val(prefill.tax_number); }
+                }
+
+                // ปิด check_api
+                $('#check_api').val('');
+
+                // default เป็นสำนักงานใหญ่
+                $('.branch_type[value="1"]').prop('checked', true);
+                $('.branch_type').iCheck('update');
+                $('#branch_type1').prop('disabled', false);
+
+                // กรอก contact / email ถ้ามี
+                function setIfEmpty(sel, val) { if ($(sel).val() === '' && val) { $(sel).val(val); } }
+
+                if (prefill.iCustomer) {
+                    setIfEmpty('#email',        prefill.iCustomer.UserEmail);
+                    setIfEmpty('#phone_number', prefill.iCustomer.UserPhone);
+                }
+
+                if (applicant === '2') {
+                    // บุคคลธรรมดา
+                    if (prefill.iCustomer) {
+                        setIfEmpty('#person_first_name', prefill.iCustomer.UserFirstName);
+                        setIfEmpty('#person_last_name',  prefill.iCustomer.UserLastName);
+                        setIfEmpty('#first_name',        prefill.iCustomer.UserFirstName);
+                        setIfEmpty('#last_name',         prefill.iCustomer.UserLastName);
+                    }
+                    setIfEmpty('#contact_tax_id', prefill.tax_number);
+                } else {
+                    // นิติบุคคล
+                    if (prefill.iCustomer) {
+                        setIfEmpty('#first_name', prefill.iCustomer.UserFirstName);
+                        setIfEmpty('#last_name',  prefill.iCustomer.UserLastName);
+                    }
+                }
+
+                // juristic_status ถ้ามี
+                if (prefill.juristic_status) {
+                    $('#juristic_status').val(prefill.juristic_status);
+                }
+
+                // เปิดฟอร์ม
+                $('#div_profile').show();
+                $('#div_sign_up').show();
+            }
+
+            // ===== เรียกตอน ready =====
+            $(document).ready(function () {
+                @if(!empty($prefill))
+                    var prefill = @json($prefill);
+                    skipIntroAndPrefill();
+                @endif
+
+                // ค่า default ของเพจ (ถ้าไม่ได้ skip)
+                $('#div_profile').hide();
+                $('#div_cancel').show();
+                $('#div_sign_up').hide();
+                $('.tax_id_format').inputmask('9-9999-99999-99-9');
+                $('.phone_number_format').inputmask('999-999-9999');
+            });
     </script>
 @endpush

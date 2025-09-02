@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
 
@@ -1067,5 +1068,29 @@ if(!empty($req->tax_id) && strlen($req->tax_id) == 13){
 
         return [$moo, $soi, $road, $tumbol, $ampur];
     }
+
+    public function completeProfile(Request $request) //SSO
+    {
+        // รับพารามิเตอร์จากลิงก์ที่คุณ redirect มา
+        $token  = $request->query('token');
+        $source = $request->query('source');
+
+        // ดึง snapshot จาก Cache แล้วลบทันที (กันใช้ซ้ำ)
+        $snapshot = $token ? Cache::pull('prereg:' . $token) : null;
+
+        // เคส token หมดอายุ/ผิด, หรือ source ไม่ตรง — กลับไปหน้า register ปกติ
+        if (!$snapshot || $source !== 'i-industry' || ($snapshot['source'] ?? null) !== 'i-industry') {
+            return redirect()
+                ->route('register') // ชื่อ route ของหน้าลงทะเบียนเดิม
+                ->with('flash_message', 'ลิงก์หมดอายุหรือไม่ถูกต้อง กรุณาเริ่มใหม่');
+        }
+
+        // ตั้ง session flag + payload สำหรับรอบถัดไปที่หน้า register (ครั้งเดียว)
+        return redirect()
+            ->route('register')            // ไปหน้าเดิม (slug/ไฟล์เดิมของลูกค้า)
+            ->with('reg_skip', true)       // ให้ Blade ข้าม intro เฉพาะเคสนี้
+            ->with('reg_prefill', $snapshot); // payload สำหรับ prefill (ไม่ทับค่าที่ผู้ใช้กรอกเอง)
+    }
+
 
 }
