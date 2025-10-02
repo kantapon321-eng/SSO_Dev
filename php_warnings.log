@@ -1,0 +1,74 @@
+[22-Sep-2025 13:56:20 Asia/Bangkok] PHP Fatal error:  Uncaught ErrorException: Method ReflectionParameter::getClass() is deprecated in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php:826
+Stack trace:
+#0 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(826): Illuminate\Foundation\Bootstrap\HandleExceptions->handleError(8192, 'Method Reflecti...', 'C:\\Users\\Acer\\D...', 826)
+#1 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(795): Illuminate\Container\Container->resolveDependencies(Array)
+#2 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build('App\\Exceptions\\...')
+#3 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('App\\Exceptions\\...', Array)
+#4 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('App\\Exceptions\\...', Array)
+#5 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(256): Illuminate\Foundation\Application->make('App\\Exceptions\\...', Array)
+#6 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(764): Illuminate\Container\Container->Illuminate\Container\{closure}(Object(Illuminate\Foundation\Application), Array)
+#7 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build(Object(Closure))
+#8 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('Illuminate\\Cont...', Array)
+#9 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('Illuminate\\Cont...', Array)
+#10 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(159): Illuminate\Foundation\Application->make('Illuminate\\Cont...')
+#11 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(112): Illuminate\Foundation\Bootstrap\HandleExceptions->getExceptionHandler()
+#12 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(89): Illuminate\Foundation\Bootstrap\HandleExceptions->renderHttpResponse(Object(ErrorException))
+#13 [internal function]: Illuminate\Foundation\Bootstrap\HandleExceptions->handleException(Object(ErrorException))
+#14 {main}
+  thrown in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php on line 826
+[22-Sep-2025 13:56:20 Asia/Bangkok] PHP Fatal error:  Uncaught ErrorException: Method ReflectionParameter::getClass() is deprecated in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php:826
+Stack trace:
+#0 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(826): Illuminate\Foundation\Bootstrap\HandleExceptions->handleError(8192, 'Method Reflecti...', 'C:\\Users\\Acer\\D...', 826)
+#1 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(795): Illuminate\Container\Container->resolveDependencies(Array)
+#2 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build('App\\Exceptions\\...')
+#3 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('App\\Exceptions\\...', Array)
+#4 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('App\\Exceptions\\...', Array)
+#5 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(256): Illuminate\Foundation\Application->make('App\\Exceptions\\...', Array)
+#6 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(764): Illuminate\Container\Container->Illuminate\Container\{closure}(Object(Illuminate\Foundation\Application), Array)
+#7 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build(Object(Closure))
+#8 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('Illuminate\\Cont...', Array)
+#9 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('Illuminate\\Cont...', Array)
+#10 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(159): Illuminate\Foundation\Application->make('Illuminate\\Cont...')
+#11 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(112): Illuminate\Foundation\Bootstrap\HandleExceptions->getExceptionHandler()
+#12 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(89): Illuminate\Foundation\Bootstrap\HandleExceptions->renderHttpResponse(Object(ErrorException))
+#13 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(123): Illuminate\Foundation\Bootstrap\HandleExceptions->handleException(Object(ErrorException))
+#14 [internal function]: Illuminate\Foundation\Bootstrap\HandleExceptions->handleShutdown()
+#15 {main}
+  thrown in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php on line 826
+[22-Sep-2025 13:58:01 Asia/Bangkok] PHP Fatal error:  Uncaught ErrorException: Method ReflectionParameter::getClass() is deprecated in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php:826
+Stack trace:
+#0 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(826): Illuminate\Foundation\Bootstrap\HandleExceptions->handleError(8192, 'Method Reflecti...', 'C:\\Users\\Acer\\D...', 826)
+#1 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(795): Illuminate\Container\Container->resolveDependencies(Array)
+#2 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build('App\\Exceptions\\...')
+#3 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('App\\Exceptions\\...', Array)
+#4 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('App\\Exceptions\\...', Array)
+#5 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(256): Illuminate\Foundation\Application->make('App\\Exceptions\\...', Array)
+#6 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(764): Illuminate\Container\Container->Illuminate\Container\{closure}(Object(Illuminate\Foundation\Application), Array)
+#7 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build(Object(Closure))
+#8 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('Illuminate\\Cont...', Array)
+#9 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('Illuminate\\Cont...', Array)
+#10 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(159): Illuminate\Foundation\Application->make('Illuminate\\Cont...')
+#11 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(112): Illuminate\Foundation\Bootstrap\HandleExceptions->getExceptionHandler()
+#12 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(89): Illuminate\Foundation\Bootstrap\HandleExceptions->renderHttpResponse(Object(ErrorException))
+#13 [internal function]: Illuminate\Foundation\Bootstrap\HandleExceptions->handleException(Object(ErrorException))
+#14 {main}
+  thrown in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php on line 826
+[22-Sep-2025 13:58:01 Asia/Bangkok] PHP Fatal error:  Uncaught ErrorException: Method ReflectionParameter::getClass() is deprecated in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php:826
+Stack trace:
+#0 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(826): Illuminate\Foundation\Bootstrap\HandleExceptions->handleError(8192, 'Method Reflecti...', 'C:\\Users\\Acer\\D...', 826)
+#1 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(795): Illuminate\Container\Container->resolveDependencies(Array)
+#2 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build('App\\Exceptions\\...')
+#3 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('App\\Exceptions\\...', Array)
+#4 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('App\\Exceptions\\...', Array)
+#5 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(256): Illuminate\Foundation\Application->make('App\\Exceptions\\...', Array)
+#6 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(764): Illuminate\Container\Container->Illuminate\Container\{closure}(Object(Illuminate\Foundation\Application), Array)
+#7 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(646): Illuminate\Container\Container->build(Object(Closure))
+#8 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php(601): Illuminate\Container\Container->resolve('Illuminate\\Cont...', Array)
+#9 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(734): Illuminate\Container\Container->make('Illuminate\\Cont...', Array)
+#10 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(159): Illuminate\Foundation\Application->make('Illuminate\\Cont...')
+#11 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(112): Illuminate\Foundation\Bootstrap\HandleExceptions->getExceptionHandler()
+#12 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(89): Illuminate\Foundation\Bootstrap\HandleExceptions->renderHttpResponse(Object(ErrorException))
+#13 C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php(123): Illuminate\Foundation\Bootstrap\HandleExceptions->handleException(Object(ErrorException))
+#14 [internal function]: Illuminate\Foundation\Bootstrap\HandleExceptions->handleShutdown()
+#15 {main}
+  thrown in C:\Users\Acer\Downloads\devops_sso-main\devops_sso-main\vendor\laravel\framework\src\Illuminate\Container\Container.php on line 826

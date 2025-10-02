@@ -10,10 +10,11 @@ return [
     ],
 
     // map JuristicType (i-industry) -> juristic_status (ระบบเรา)
-    // ถ้าระบบคุณใช้โค้ดอื่น แก้ฝั่งขวาได้เลย
+    // สอดคล้องกับ Controller: jt=1 => นิติบุคคล, jt=2 => บุคคลธรรมดา
     'status_map' => [
-        '1' => '1', // บุคคลธรรมดา
-        '2' => '2', // นิติบุคคล
+        '1' => '2', // jt=1 (นิติบุคคล) → juristic_status=2
+        '2' => '1', // jt=2 (บุคคลธรรมดา) → juristic_status=1
+        '4' => '4', // jt=4 (อื่นๆ) → คงค่าเดิม
     ],
 
     // iindustry uid -> pid

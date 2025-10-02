@@ -721,6 +721,72 @@
 
 @endsection
 
+@php
+    // Server-side checks (no file/laravel logs — we just echo results into the page)
+    $qToken = (string) request()->query('token', '');
+    $cookieName = config('session.cookie');
+    $appUrl = config('app.url');
+
+    // Does the session (on the server) contain the expected keys right now?
+    $hasTokenKey = $qToken !== '' ? session()->has('prereg:'.$qToken) : false;
+
+    // Collect all session keys that start with 'prereg:' (helps spot token/key mismatches)
+    $preregKeys = [];
+    foreach (session()->all() as $k => $v) {
+        if (strncmp($k, 'prereg:', 7) === 0) { $preregKeys[] = $k; }
+    }
+@endphp
+
+<script>
+// ======== PREREG DevTools Diagnostics (client-side only) ========
+(function(){
+  try {
+    console.group('%c[PREREG DIAG]', 'color:#0bf;font-weight:bold;');
+
+    // Browser context
+    console.log('location.origin  =', location.origin);
+    console.log('location.href    =', location.href);
+
+    // From server (embedded as constants so you can see what PHP saw)
+    console.log('APP_URL          =', @json($appUrl));
+    console.log('query.token      =', @json($qToken));
+    console.log('session.cookie   =', @json($cookieName));
+
+    // Server-side session state at render time
+    console.log('session.has(prereg:token) =', @json($hasTokenKey));
+    console.log('session.prereg keys       =', @json($preregKeys));
+
+    // Browser cookies actually present on this page load
+    var cname = @json($cookieName) + '=';
+    var hasSessCookie = document.cookie.indexOf(cname) !== -1;
+    console.log('document.cookie has session cookie? =', hasSessCookie);
+
+    // What the page will initialize for __PREREG (before init)
+    console.log('window.__PREREG (pre-init) =', typeof window.__PREREG === 'undefined' ? 'UNDEFINED' : window.__PREREG);
+    console.groupEnd();
+  } catch(e) {
+    console.warn('[PREREG DIAG] error:', e);
+  }
+})();
+</script>
+
+@push('scripts')
+<script>
+window.__PREREG = @json($prereg ?? null, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+console.log('[PREREG] init', window.__PREREG);
+</script>
+@endpush
+
+
+<script>
+(function() {
+  var _pr = @json($prereg ?? null);
+  window.__PREREG = _pr;
+  
+  console.log('[PREREG] blade boot', _pr ? 'OK' : 'EMPTY', _pr);
+})();
+</script>
+
 @push('js')
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkwr5rmzY9btU08sQlU9N0qfmo8YmE91Y&libraries=places&callback=initAutocomplete"   async defer></script>
 <script>
@@ -818,6 +884,121 @@
 
 <!-- ====== Loading ====== -->
 <script src="{{ asset('plugins/components/loading-overlay/js/loadingoverlay.min.js') }}"></script>
+
+@env('local')
+<script>
+(function () {
+  if (!window.jQuery) return;
+
+  // ---------- 1) Fallback-only Ajax shim (pass-through unless fail) ----------
+  const realAjax = $.ajax;
+  const once = Object.create(null); // per-endpoint guard
+
+  function matchKey(url) {
+    if (/\/auth\/register\/get_legal_entity$/.test(url)) return 'entity';     // JT 1/3
+    if (/\/auth\/register\/get_tax_number$/.test(url))   return 'person';     // JT 2
+    if (/\/auth\/register\/get_taxid$/.test(url))        return 'gov';        // JT 4
+    if (/\/auth\/register\/datatype$/.test(url))         return 'datatype';   // contact lookup
+    return '';
+  }
+
+  function payloadFor(key) {
+    switch (key) {
+      case 'entity':   // “not registered, normal status” -> proceed to data_pid
+        return { check: false, juristic_status: '1' };
+      case 'person':   // “not registered / not found”    -> continue branch
+        return { check: false, person: 'not-found' };
+      case 'gov':      // “not registered, no API data”   -> continue branch
+        return { check: false, check_api: false };
+      case 'datatype': // harmless stub so contact lookup doesn’t explode
+        return { length: 0 };
+      default:         // never used
+        return {};
+    }
+  }
+
+  $.ajax = function (opts) {
+    const url = String(opts && opts.url || '');
+    const key = matchKey(url);
+
+    // no target → pure pass-through
+    if (!key) return realAjax.apply(this, arguments);
+
+    const jq = realAjax.apply(this, arguments);
+
+    // if it succeeds, mark and do nothing else
+    jq.done(function () { once[key] = true; });
+
+    // if it fails and we haven't patched it for this page yet → synthesize success
+    jq.fail(function () {
+      if (once[key]) return;
+      once[key] = true; // fire only once per endpoint per page load
+      const data = payloadFor(key);
+      try { opts.success && opts.success(data, 'success', {}); } catch(e) {}
+      try { opts.complete && opts.complete({}, 'success'); } catch(e) {}
+      // we deliberately DO NOT call opts.error so the flow continues
+      console.warn('[fallback-only]', key, '→ provided minimal payload');
+    });
+
+    return jq;
+  };
+
+  // ---------- 2) Auto-confirm the first SweetAlert (no visual modal) ----------
+  if (window.Swal && typeof Swal.fire === 'function') {
+    const realFire = Swal.fire.bind(Swal);
+    let first = true;
+    Swal.fire = function () {
+      const p = realFire.apply(this, arguments);
+      if (first) {
+        first = false;
+        // return a promise that resolves immediately as if user clicked "ยืนยัน"
+        return Promise.resolve({ value: true, isConfirmed: true });
+      }
+      return p;
+    };
+  }
+
+  // ---------- 3) Kick their existing flow (fill → JT → click #search) ----------
+  function setVal(sel, v) {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const next = String(v == null ? '' : v).trim();
+    if (!next) return;
+    const setter = Object.getOwnPropertyDescriptor(el.__proto__, 'value')?.set;
+    setter ? setter.call(el, next) : (el.value = next);
+    el.dispatchEvent(new Event('input',  { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function pickJT(jt) {
+    // keep your mapping exactly
+    const map = { '1':'1', '2':'2', '3':'1', '4':'3', '5':'5' };
+    const val = map[String(jt)] || '5';
+    const r = document.querySelector('.applicanttype_id[value="'+val+'"]');
+    if (r) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+
+  function kick() {
+    if (!window.__PREREG) return;
+    setVal('#tax_number', __PREREG.bid || __PREREG.uid || '');
+    pickJT(__PREREG.jt);
+    setVal('#person_type', '1'); // matches the page’s own defaulting
+    const btn = document.getElementById('search');
+    if (btn) btn.click();
+  }
+
+  // wait until their handlers are bound
+  let tries = 120;
+  (function wait() {
+    if (document.readyState !== 'complete') return setTimeout(wait, 80);
+    if (!document.getElementById('search')) return tries-- ? setTimeout(wait, 80) : null;
+    setTimeout(kick, 60);
+  })();
+})();
+</script>
+@endenv
+
+
 <script>
 
 (function () {
@@ -902,7 +1083,9 @@
       forceShowForm();
     })();
 
+   
     $(document).ready(function () {
+     /*
 
             // ===== Prefill จาก session('reg_prefill') =====
         @if(!empty($prefill))
@@ -967,7 +1150,7 @@
         })();
         @endif
 
-
+*/
             $('#div_profile').hide();
             $('#div_cancel').show();
             $('#div_sign_up').hide();
@@ -1314,12 +1497,14 @@
                   const cars            = ["","นิติบุคคล", "บุคคลธรรมดา", "คณะบุคคล", "ส่วนราชการ", "อื่นๆ"];
                   var tax_number        = $('#tax_number').val() ;
      if(tax_number != ""){
-
+                //console.log("Tax number is:",tax_number)
+                //console.log("Juristic type is:",applicanttype_id)
                 if(applicanttype_id == 1 || applicanttype_id == 2  || applicanttype_id == 3  || applicanttype_id == 4 ){ //  นิติบุคคล     บุคคลธรรมดา     คณะบุคคล     ส่วนราชการ
                     tax_number = tax_number.toString().replace(/\D/g,'');
                     if(tax_number.length >= 13){
                                 // Text
-                                $.LoadingOverlay("show", {
+                                //console.log("Tax number have at least 13 digits")
+                                $.LoadingOverlay("show", { //plugin ไม่โหลด
                                         image       : "",
                                         text        : "กำลังโหลด..."
                                 });
@@ -1554,7 +1739,8 @@
 
 
                         }else if(applicanttype_id == 2){ // บุคคลธรรมดา
-                             $.LoadingOverlay("hide");
+                            console.log("We got บุคคลธรรมดา")
+                             $.LoadingOverlay("hide"); 
                             $.ajax({
                                     url: "{!! url('auth/register/get_tax_number') !!}",
                                     method:"POST",
@@ -2833,80 +3019,219 @@
                 });
 
             }
-            function skipIntroAndPrefill() {
-                var SKIP = {!! $skip ? 'true' : 'false' !!};
-                if(!SKIP) return;
-
-                // map JT -> applicanttype_id
-                var applicant = (prefill.jt === '2') ? '1' : '2';
-
-                // ตั้งค่าประเภทผู้สมัคร
-                $('.applicanttype_id[value="'+ applicant +'"]').prop('checked', true);
-                $('.applicanttype_id').iCheck('update');
-                applicanttype();
-
-                // กรอก tax_number และ username
-                if (prefill.tax_number) {
-                    if (!$('#tax_number').val()) { $('#tax_number').val(prefill.tax_number); }
-                    if (!$('#username').val())   { $('#username').val(prefill.tax_number); }
-                }
-
-                // ปิด check_api
-                $('#check_api').val('');
-
-                // default เป็นสำนักงานใหญ่
-                $('.branch_type[value="1"]').prop('checked', true);
-                $('.branch_type').iCheck('update');
-                $('#branch_type1').prop('disabled', false);
-
-                // กรอก contact / email ถ้ามี
-                function setIfEmpty(sel, val) { if ($(sel).val() === '' && val) { $(sel).val(val); } }
-
-                if (prefill.iCustomer) {
-                    setIfEmpty('#email',        prefill.iCustomer.UserEmail);
-                    setIfEmpty('#phone_number', prefill.iCustomer.UserPhone);
-                }
-
-                if (applicant === '2') {
-                    // บุคคลธรรมดา
-                    if (prefill.iCustomer) {
-                        setIfEmpty('#person_first_name', prefill.iCustomer.UserFirstName);
-                        setIfEmpty('#person_last_name',  prefill.iCustomer.UserLastName);
-                        setIfEmpty('#first_name',        prefill.iCustomer.UserFirstName);
-                        setIfEmpty('#last_name',         prefill.iCustomer.UserLastName);
-                    }
-                    setIfEmpty('#contact_tax_id', prefill.tax_number);
-                } else {
-                    // นิติบุคคล
-                    if (prefill.iCustomer) {
-                        setIfEmpty('#first_name', prefill.iCustomer.UserFirstName);
-                        setIfEmpty('#last_name',  prefill.iCustomer.UserLastName);
-                    }
-                }
-
-                // juristic_status ถ้ามี
-                if (prefill.juristic_status) {
-                    $('#juristic_status').val(prefill.juristic_status);
-                }
-
-                // เปิดฟอร์ม
-                $('#div_profile').show();
-                $('#div_sign_up').show();
-            }
-
-            // ===== เรียกตอน ready =====
-            $(document).ready(function () {
-                @if(!empty($prefill))
-                    var prefill = @json($prefill);
-                    skipIntroAndPrefill();
-                @endif
-
-                // ค่า default ของเพจ (ถ้าไม่ได้ skip)
-                $('#div_profile').hide();
-                $('#div_cancel').show();
-                $('#div_sign_up').hide();
-                $('.tax_id_format').inputmask('9-9999-99999-99-9');
-                $('.phone_number_format').inputmask('999-999-9999');
-            });
     </script>
 @endpush
+
+@push('scripts')
+<script>
+window.__PREREG_BOOTING = true;
+
+(function(){
+  const hasjQ = () => !!(window.jQuery && window.$);
+
+  // --- DOM ready ---
+  const domReady = new Promise(res=>{
+    if (document.readyState === 'complete' || document.readyState === 'interactive') return res();
+    document.addEventListener('DOMContentLoaded', res, { once:true });
+  });
+
+  // ---------- Targeted SweetAlert auto-confirm (บุคคลธรรมดา) ----------
+  let __PREREG_P2_CALLED = false;
+  domReady.then(()=>{
+    if (window.Swal && typeof Swal.fire === 'function' && !Swal.__autoConfirmType2){
+      const orig = Swal.fire;
+      const P2_CONFIRM = /(ท่านต้องการลงทะเบียนผู้ประกอบการประเภทบุคคลธรรมดา|หมายเลข.*บุคคลธรรมดา.*ลงทะเบียน|ลงทะเบียน.*บุคคลธรรมดา)/;
+      Swal.fire = function(opts){
+        const p = orig.apply(this, arguments);
+        try {
+          const title = (opts && typeof opts.title === 'string') ? opts.title : '';
+          if (P2_CONFIRM.test(title)) {
+            const autoPress = () => {
+              const btn = document.querySelector('.swal2-confirm');
+              if (btn && !btn.disabled && btn.offsetParent !== null) {
+                const tax = (document.querySelector('#tax_number')?.value ||
+                             document.querySelector('#contact_tax_id')?.value || '').replace(/\D/g,'');
+                btn.click();
+                console.log('[prereg] auto-confirmed P2 Swal:', title);
+                setTimeout(()=>{
+                  try {
+                    const $ = window.jQuery;
+                    const typeSel = ($ && $('.applicanttype_id:checked').val()) || '';
+                    if (!__PREREG_P2_CALLED && typeSel == '2' &&
+                        typeof window.data_pid === 'function' && tax.length >= 13) {
+                      __PREREG_P2_CALLED = true;
+                      console.log('[prereg] calling data_pid for P2…');
+                      window.data_pid(tax);
+                    }
+                  } catch(_) {}
+                }, 900);
+                return true;
+              }
+              return false;
+            };
+            setTimeout(autoPress, 150);
+            setTimeout(autoPress, 300);
+            setTimeout(autoPress, 600);
+          }
+        } catch(_) {}
+        return p;
+      };
+      Swal.__autoConfirmType2 = true;
+    }
+  });
+
+  // ---------- wait until #search has a handler ----------
+  const searchHandlerReady = new Promise(resolve=>{
+    function alreadyBound(){
+      const btn=document.getElementById('search');
+      if(!btn) return false;
+      if(typeof btn.onclick==='function') return true;
+      try{ if(hasjQ()&&jQuery._data(btn,'events')?.click?.length) return true; }catch(_){}
+      return false;
+    }
+    if (alreadyBound()) return resolve();
+    const origAdd=EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener=function(type,listener,opts){
+      if (type==='click'&&this&&this.id==='search') queueMicrotask(resolve);
+      return origAdd.call(this,type,listener,opts);
+    };
+    domReady.then(()=>{
+      if (hasjQ()&&!jQuery.fn.__preregOnHooked){
+        const origOn=jQuery.fn.on;
+        jQuery.fn.on=function(type){
+          if (this.filter('#search').length && /(^|\s)click(\s|\.|$)/.test(type)) queueMicrotask(resolve);
+          return origOn.apply(this,arguments);
+        };
+        jQuery.fn.__preregOnHooked=true;
+      }
+    });
+  });
+
+  // ---------- plugins must be ready ----------
+  const pluginsReady = new Promise(resolve=>{
+    function tryNow(){
+      if (!hasjQ()) return false;
+      const $=jQuery;
+      if ($.fn.select2 && $.fn.iCheck && $.LoadingOverlay) { resolve(); return true; }
+      return false;
+    }
+    domReady.then(tryNow); tryNow();
+  });
+
+  // ---------- app ready ----------
+  const appReady = new Promise(resolve=>{
+    domReady.then(()=>{
+      const btn=document.getElementById('search');
+      const readyNow=()=> (window.connection===true) || (btn && !btn.disabled && btn.getAttribute('aria-disabled')!=='true');
+      if (readyNow()) return resolve();
+      const mo=new MutationObserver(()=>{ if(readyNow()){ mo.disconnect(); resolve(); }});
+      if (btn) mo.observe(btn,{attributes:true,attributeFilter:['disabled','aria-disabled','class']});
+      let _conn=window.connection;
+      Object.defineProperty(window,'connection',{
+        configurable:true,
+        get(){ return _conn; },
+        set(v){ _conn=v; if (v===true) resolve(); }
+      });
+    });
+  });
+
+  // ---------- helpers ----------
+  function nativeSet($el,val){
+    if(!$el||!$el.length)return;
+    const el=$el.get(0);
+    const setter=Object.getOwnPropertyDescriptor(el.__proto__,'value')?.set
+              || Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+    if (setter) setter.call(el,String(val)); else el.value=String(val);
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    $el.trigger('input').trigger('change');
+  }
+
+  function setApplicantAndWait(val){
+    return new Promise(resolve=>{
+      const $ = jQuery;
+      const $r = $('.applicanttype_id[value="'+val+'"]');
+      if (!$r.length) return resolve(false);
+      const input = document.getElementById('tax_number');
+      let mo;
+      const finish = () => { if (mo) mo.disconnect(); resolve(true); };
+      if (input && val === '2'){
+        const isReady = () => {
+          const okPh  = input.getAttribute('placeholder') === 'เลขประจำตัวประชาชน';
+          const okLen = String(input.getAttribute('maxlength')) === '13';
+          const okPT  = ($('#person_type').val() || '') === '1';
+          return okPh && okLen && okPT;
+        };
+        if (isReady()) finish();
+        else {
+          mo = new MutationObserver(()=>{ if (isReady()) finish(); });
+          mo.observe(input, { attributes:true, attributeFilter:['placeholder','maxlength'] });
+          const pt = document.getElementById('person_type');
+          if (pt) mo.observe(pt, { childList:true, subtree:true, attributes:true });
+          setTimeout(finish, 1500);
+        }
+      } else {
+        setTimeout(finish, 150);
+      }
+      if ($r.iCheck) { $r.iCheck('check'); $r.iCheck('update'); }
+      else { $r.prop('checked', true).trigger('change'); }
+    });
+  }
+
+  function mapJT(jt){
+    if (jt==='1') return '2';                 // บุคคลธรรมดา (Iindustry quirk)
+    if (jt==='2' || jt==='3') return '1';     // นิติ / คณะ
+    if (jt==='4') return '3';                 // ส่วนราชการ
+    return '5';
+  }
+
+  function clickSearch(){
+    const btn=document.getElementById('search');
+    if (btn){
+      btn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
+      if (window.jQuery) jQuery(btn).trigger('click');
+    }
+  }
+
+  // ---------- main flow ----------
+  Promise.all([domReady,searchHandlerReady,pluginsReady,appReady]).then(async function(){
+    if (!hasjQ()) { window.__PREREG_BOOTING=false; return; }
+
+    const $=jQuery;
+    const p=window.__PREREG||{};
+    const jt=p.jt?String(p.jt):'';
+    const raw=p.bid||p.uid||p.tax_number||'';
+    const tax=(raw?String(raw):'').replace(/\D/g,'');
+    const $tax = $('#tax_number').length?$('#tax_number'):$('#contact_tax_id');
+
+    if (!jt || !tax || !$tax.length) { window.__PREREG_BOOTING=false; return; }
+
+    // 👉 only apply mapping for the radio select
+    const radioVal = (p.source === 'i-industry') ? mapJT(jt) : jt;
+
+    // 1) select applicant type
+    await setApplicantAndWait(radioVal);
+
+    // 2) type tax
+    $tax.prop('readOnly',false);
+    nativeSet($tax,tax);
+
+    // 3) click search
+    setTimeout(()=>{
+      console.log('[prereg] CLICK fired',{jt,radioVal,tax:$tax.val()});
+      clickSearch();
+      window.__PREREG_BOOTING=false;
+      setTimeout(()=>{
+        document.body.style.overflowY='auto';
+        document.documentElement.style.overflowY='auto';
+      },1200);
+    },150);
+  });
+})();
+</script>
+@endpush
+
+
+@yield('scripts')
+@stack('scripts')
+

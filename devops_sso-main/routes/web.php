@@ -3,6 +3,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\AttachFile;
+use App\Http\Controllers\Auth\RegisterController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -14,6 +15,9 @@ use App\AttachFile;
 |
 */
 //Verify Email
+Route::get('/hello', function () {
+    return 'Hello World';
+});
 Route::get('activated-mail/{code}/{redirect_uri?}', 'Auth\RegisterController@ActivatedMail');
 
 Route::get('funtions/set-cookie', 'Funtion\\FuntionsController@setCookie');
@@ -117,6 +121,85 @@ Route::get('test-prefix', function (){
 
 //ลงทะเบียน
 
+use Illuminate\Http\Request;
+
+// i-Industry SSO Callback + Register (no auth)
+
+use App\Http\Controllers\Auth\IIndustryCallbackController;
+
+Route::match(['GET','POST'], 'callback/iindustry', [IIndustryCallbackController::class, 'handle'])
+     ->name('callback.iindustry');
+
+Route::match(['GET','POST'], '/moiapi/ind_chk.asp',     [IIndustryCallbackController::class, 'handle']);
+Route::match(['GET','POST'], '/moiapitest/ind_chk.asp', [IIndustryCallbackController::class, 'handle']);
+
+Auth::routes(['register' => false]);
+Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
+    ->middleware(['web','guest'])
+     ->name('register');
+Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+
+//Kantapon 29/9/2568 For Test Only
+
+Route::get('/test/iindustry', function (Request $r) {
+    // allow overriding via query, defaults are just for quick tests
+    $uid = (string) $r->query('uid', '1309902656213');
+    $aid = (string) $r->query('aid', '30');
+    $val = $uid . '/' . $aid;
+
+    // set the same cookie your callback expects
+    // 10 minutes, SameSite=Lax, not Secure (for http:// local)
+    $cookie = cookie('i-industry', $val, 10, '/', null, false, false, false, 'Lax');
+
+    // then send the browser to the normal callback (same host!)
+    return redirect('/moiapitest/ind_chk.asp?prog=3')->withCookie($cookie);
+});
+
+
+//fallback
+/*
+Route::post('/prereg/seed', function (\Illuminate\Http\Request $request) {
+    // ป้องกันใช้ผิดที่: เปิดเฉพาะ local/dev หรือมี TEST_KEY ถูกต้อง
+    abort_unless(app()->environment('local') || $request->header('X-TEST-KEY') === env('PREREG_TEST_KEY'), 403);
+
+    $jt  = $request->input('jt');       // '1'|'2'|'3'
+    $bid = $request->input('bid');      // เลขนิติ (ถ้ามี)
+    $uid = $request->input('uid');      // เลขบัตร (ถ้ามี)
+
+    $token = \Str::random(24);
+    $snapshot = [
+        'source' => 'i-industry',
+        'jt'     => $jt,
+        'bid'    => $bid,
+        'uid'    => $uid,
+    ];
+    \Cache::put('prereg:'.$token, $snapshot, now()->addMinutes(30));
+    session(['__prereg_token' => $token]);   // เก็บไว้ใน session เพื่อไม่ต้องพก token ใน URL
+
+    return response()->json(['ok' => true, 'token' => $token]);
+})->middleware('web')->name('prereg.seed');
+*/
+
+Route::post('/prereg/seed', function (\Illuminate\Http\Request $request) {
+    abort_unless(app()->environment('local') || $request->header('X-TEST-KEY') === env('PREREG_TEST_KEY'), 403);
+
+    $token = \Str::random(24);
+    $snapshot = [
+        'source' => 'i-industry',
+        'jt'     => (string) $request->input('jt'),
+        'bid'    => (string) $request->input('bid'),
+        'uid'    => (string) $request->input('uid'),
+    ];
+
+    // ✅ SESSION (not Cache)
+    $request->session()->put('prereg:' . $token, $snapshot);
+    $request->session()->save();
+
+    return response()->json(['ok' => true, 'token' => $token]);
+})->middleware('web')->name('prereg.seed');
+
+
+
 Route::POST('auth/register/datatype','Auth\RegisterController@datatype');
 Route::POST('auth/register/check_tax_number','Auth\RegisterController@check_tax_number');
 Route::POST('auth/register/get_tax_number','Auth\RegisterController@get_tax_number');
@@ -124,7 +207,6 @@ Route::POST('auth/register/get_legal_entity','Auth\RegisterController@get_legal_
 Route::POST('auth/register/get_legal_faculty','Auth\RegisterController@get_legal_faculty');
 Route::POST('auth/register/get_taxid','Auth\RegisterController@get_taxid');
 Route::POST('auth/register/check_email','Auth\RegisterController@check_email');
-
 
 //ลงทะเบียนสาขา
 Route::get('register-branch', 'Auth\RegisterBranchController@index');
@@ -166,23 +248,6 @@ Route::get('help', function(){
 
 
 Route::get('dashboard/e_accreditation','DashboardController@e_accreditation');
-
-use Illuminate\Http\Request;
-
-// i-Industry SSO Callback + Register (no auth)
-
-use App\Http\Controllers\Auth\IIndustryCallbackController;
-use App\Http\Controllers\Auth\IIndustryRegistrationController;
-
-Route::match(['GET','POST'], 'callback/iindustry', [IIndustryCallbackController::class, 'handle'])
-     ->name('callback.iindustry');
-
-Route::get('register/complete-profile', [IIndustryRegistrationController::class, 'showCompleteProfile'])
-     ->name('register.complete-profile');
-
-Route::post('register/complete-profile', [IIndustryRegistrationController::class, 'storeCompleteProfile'])
-     ->name('register.complete-profile.store');
-
 
 Route::group(['middleware' => ['auth', 'roles'], 'roles' => ['admin','user']], function () {
     Route::get('/dashboard', function () {
@@ -245,8 +310,6 @@ Route::post('2fa/setup','Auth\LoginController@google2fa_setup'); //รับค�
 Route::post('2fa/clear_session','Auth\LoginController@google2fa_clear_session'); //กดยกเลิก modal 2fa
 //Route::get('enableTwoFactor','Auth\GoogleAuthenController@enableTwoFactor');//ทดสอบ
 
-Auth::routes();
-
 //บันทึกการตั้งค่า theme ของผู้ใช้งาน
 Route::get('user/savetheme/{theme_name}', 'UsersController@savetheme');
 Route::get('user/savefix-header/{fix_header}', 'UsersController@savefix_header');
@@ -295,3 +358,54 @@ Route::POST('request-section-5/application-ibcb/delete_update', 'Section5\\Appli
 Route::resource('request-section-5/application-ibcb', 'Section5\\ApplicationIbcbController');
 
 Route::resource('counsels', 'CounselsController');
+
+Route::get('/test-tisi-url', function (Request $request) {
+    try {
+        $uid = 'abc123';
+        $aid = 'xyz789';
+
+        $prefix = strtolower(explode('/', trim($request->path(), '/'))[0] ?? '');
+        $base = ($prefix === 'moiapitest')
+            ? 'https://www4.tisi.go.th/moiapitest/LoginIndust.asp'
+            : 'https://www3.tisi.go.th/moiapi/LoginIndust.asp';
+
+        $url = $base . '?uid=' . urlencode($uid) . '&aid=' . urlencode($aid);
+
+        return response()->json(['url' => $url]);
+    } catch (\Exception $e) {
+        Log::error('เกิดข้อผิดพลาดในการสร้าง TISI URL: ' . $e->getMessage());
+        return response()->json([
+            'error' => true,
+            'message' => 'ไม่สามารถสร้าง URL ได้',
+        ], 500);
+    }
+});
+
+Route::get('/moiapi/proxy', function (Request $r) {
+    $pid = (int) $r->query('pid', 0);
+    $val = (string) $r->query('val', '');
+    if ($pid <= 0 || $val === '') {
+        return response()->json(['error' => 'bad_request'], 400);
+    }
+
+    $url = 'https://www3.tisi.go.th/moiapi/srv.asp?pid=' . $pid
+         . '&refer=intelligist&val=' . rawurlencode($val);
+
+    try {
+        $headers = [
+            'User-Agent'      => 'Mozilla/5.0',
+            'Accept'          => 'application/json,text/plain,*/*',
+            'Accept-Language' => 'th,en-US;q=0.7,en;q=0.3',
+            'Connection'      => 'close',
+        ];
+        $client = new Client(['timeout' => 12, 'http_errors' => false, 'verify' => true, 'headers' => $headers]);
+        $resp   = $client->get($url);
+
+        return response($resp->getBody(), $resp->getStatusCode())
+            ->header('Content-Type', $resp->getHeaderLine('Content-Type') ?: 'application/json')
+            ->header('Cache-Control', 'no-store');
+    } catch (\Throwable $e) {
+        Log::warning('[moi-proxy] ' . $e->getMessage());
+        return response()->json(['error' => 'upstream', 'message' => 'fetch_failed'], 502);
+    }
+})->name('moi.proxy');

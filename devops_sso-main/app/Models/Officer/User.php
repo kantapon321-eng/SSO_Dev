@@ -30,8 +30,7 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'reg_13ID', 'reg_fname', 'reg_lname', 'reg_email', 'reg_phone', 'reg_wphone', 'reg_pword', 'reg_unmd5', 'reg_subdepart',   
-        'tax_number','firstname','lastname','email','phone', 'source','juristic_type','external_uid','external_bid', 'progid_last','is_blocked'
+        'reg_13ID', 'reg_fname', 'reg_lname', 'reg_email', 'reg_phone', 'reg_wphone', 'reg_pword', 'reg_unmd5', 'reg_subdepart'
     ];
 
     /**
@@ -42,10 +41,6 @@ class User extends Authenticatable
     protected $hidden = [
         'reg_pword', 'remember_token',
     ];
-
-    protected $casts = [
-        'is_blocked' => 'boolean',
-      ];
 
     public function profile(){
         return $this->hasOne(Profile::class);

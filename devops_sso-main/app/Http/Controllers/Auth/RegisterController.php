@@ -9,9 +9,10 @@ use App\UserGroupMap;
 use App\Sessions;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
 
@@ -108,15 +109,6 @@ class RegisterController extends Controller
             ->causedBy($user)
             ->log('Registered');
         $user->assignRole('user');
-    }
-
-    public function show(Request $request)
-    {
-        $token  = (string) $request->query('token', '');
-        $prereg = $token ? Cache::get('prereg:' . $token) : null;
-
-        // ไม่ดึง/แก้อะไรเพิ่ม ปล่อยให้ view กรอกเองผ่าน JS
-        return view('auth.register', compact('prereg'));
     }
 
     public function register(Request $request)
@@ -797,6 +789,7 @@ if(!empty($req->tax_id) && strlen($req->tax_id) == 13){
                 if(!empty($api->CommitteeInformations)){  // ข้อมูลคณะกรรมการ
 
                     $prefixs                            = Prefix::pluck('id', 'initial');
+                    $prefixs = (array) $prefixs;        //Kantapon 1/10/2568
                     $informations                       =  min($api->CommitteeInformations);
                     $response['first_name']             =  $informations->FirstName ?? ''; // ชื่อ
                     $response['last_name']              =  $informations->LastName ?? ''; // สกุล
@@ -1068,29 +1061,63 @@ if(!empty($req->tax_id) && strlen($req->tax_id) == 13){
 
         return [$moo, $soi, $road, $tumbol, $ampur];
     }
-
-    public function completeProfile(Request $request) //SSO
+/*
+    public function showRegistrationForm()
     {
-        // รับพารามิเตอร์จากลิงก์ที่คุณ redirect มา
-        $token  = $request->query('token');
-        $source = $request->query('source');
+        // ใช้ request() helper เพื่อคง signature เดิม (ไม่มีพารามิเตอร์)
+        $request = request();
+    
+        // อ่าน token/source จาก query => ห้ามเปลี่ยนชื่อ key
+        $token  = (string) $request->query('token', '');
+        $source = (string) $request->query('source', '');
+    
+        // ✅ ดึง snapshot จาก session ตาม token
+        $prereg = $token ? $request->session()->get('prereg:' . $token) : null;
 
-        // ดึง snapshot จาก Cache แล้วลบทันที (กันใช้ซ้ำ)
-        $snapshot = $token ? Cache::pull('prereg:' . $token) : null;
-
-        // เคส token หมดอายุ/ผิด, หรือ source ไม่ตรง — กลับไปหน้า register ปกติ
-        if (!$snapshot || $source !== 'i-industry' || ($snapshot['source'] ?? null) !== 'i-industry') {
-            return redirect()
-                ->route('register') // ชื่อ route ของหน้าลงทะเบียนเดิม
-                ->with('flash_message', 'ลิงก์หมดอายุหรือไม่ถูกต้อง กรุณาเริ่มใหม่');
+        if (!$prereg && $token) {
+            $prereg = \Cache::get('prereg:' . $token);
+            if ($prereg) {
+                // promote to session so the Blade sees it reliably
+                $request->session()->put('prereg:' . $token, $prereg);
+                $request->session()->save();
+            }
         }
+    
+        // log ลง laravel.log (ไว้ debug ฝั่งเซิร์ฟเวอร์ ไม่ขึ้น DevTools)
+        Log::debug('[PREREG-showRegistrationForm]', [
+            'token'      => $token,
+            'has_prereg' => (bool) $prereg,
+            'source'     => $source,
+            'sess_keys' => array_keys($request->session()->all()),
+        ]);
+    
+        // ส่งไปที่ view เดิมของระบบคุณ
+        // *** สำคัญ: อย่าเปลี่ยนชื่อ view ***
+        return view('auth.register', compact('prereg', 'token', 'source'));
+    }
+ */
+public function showRegistrationForm()
+{
+    $r      = request();
+    $token  = (string) $r->query('token', '');
+    $source = (string) $r->query('source', '');
 
-        // ตั้ง session flag + payload สำหรับรอบถัดไปที่หน้า register (ครั้งเดียว)
-        return redirect()
-            ->route('register')            // ไปหน้าเดิม (slug/ไฟล์เดิมของลูกค้า)
-            ->with('reg_skip', true)       // ให้ Blade ข้าม intro เฉพาะเคสนี้
-            ->with('reg_prefill', $snapshot); // payload สำหรับ prefill (ไม่ทับค่าที่ผู้ใช้กรอกเอง)
+    // 1) normal: exact tokened snapshot
+    $prereg = $token !== '' ? $r->session()->get('prereg:' . $token) : null;
+
+    // 2) fallback (still session-only): use the latest snapshot if tokened lookup missed
+    if (!$prereg) {
+        $prereg = $r->session()->get('prereg:latest');
+        // optional: promote under the current token for downstream consistency
+        if ($prereg && $token !== '') {
+            $r->session()->put('prereg:' . $token);
+            $r->session()->save();
+        }
     }
 
+    return view('auth.register', compact('prereg', 'token', 'source'));
+}
 
+
+    
 }

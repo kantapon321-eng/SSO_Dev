@@ -12,7 +12,9 @@ class VerifyCsrfToken extends Middleware
      * @var array
      */
     protected $except = [
-        'callback/iindustry', #iindustry addition
+        'callback/iindustry',
+        'moiapi/ind_chk.asp',
+        'moiapitest/ind_chk.asp',
         'dashboard-auth',
         'test'
     ];
